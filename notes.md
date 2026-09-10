@@ -71,3 +71,53 @@ for -
 	- basically 10-iteration for loop
 
 
+COMMAND LINE ENVIRONMENT
+
+ARGUMENTS:
+$1 - first argument
+$2 - second argument
+...
+$@ - access all arguments
+$# - num of arguments
+-/-- : represent flags
+	- : used usually for single letters
+	-- : used for longer names of flags
+	ex) -a == --all
+	single dashes can be combined: ls -l -a == ls -la or ls -al
+
+mkdir src
+mkdir docs 
+#is equal to
+mkdir src docs
+
+globbing - special patterns that the shell will expand before calling the program
+	- instead of long nonrecursive code, we can just run **rm *.py** which will search for files in urrent folder matching pattern .py
+	- most common globs are: * (0 or more of anything), ? (exactly one of anything), and {} (expand comma-separated list of patterns into multiple arguments)
+
+cat myfile | grep -P '\d+' | uniq -c
+	- all programs execute at once
+	- shell is connecting output of cat to input of grep and output of grep to input of uniq
+
+stdin - standard input
+- : accepted as filename to mean "read from stdin"
+stdout - used for piping output of program to next command in pipeline
+stderr - alternative stream that is intended for programs to report warnings 
+fzf - fuzzy finder, reads lines from stdin and provides interactive interface to filter and select
+
+foo=bar + $foo - used to assign variables in bash
+
+shell variables are ONLY STRINGS
+'' - literal strings and will not expand variables, perform command substitution, or process escape sequences
+"" - delimited strings will
+printenv - find current environment variables
+export - modifies current environment and all child processes will inherit
+unset - delete variable
+
+SSH 
+ssh-keygen : generates key pair
+ssh-keygen -y -f/path/to/key - check if you have passphrase and validate it
+
+- bash - ~/.bashrc, ~/.bash_profile
+- git - ~/.gitconfig
+- ssh - ~/.ssh/config
+
