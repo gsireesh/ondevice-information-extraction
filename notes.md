@@ -120,4 +120,35 @@ ssh-keygen -y -f/path/to/key - check if you have passphrase and validate it
 - bash - ~/.bashrc, ~/.bash_profile
 - git - ~/.gitconfig
 - ssh - ~/.ssh/config
+- vim - ~/.vimrc and ~/.vim folder
+- tmux - ~/.tmux.conf
 
+export PATH="$PATH:path/to/append" - tells shell to set value of $PATH variable to current value plus new path
+
+tldr - provides simplified, example-focused man pages
+
+alias - create an alias for another command
+
+
+AI IN SHELL:
+command generation:
+
+$ llm cmd "find all python files modified in the last week"
+find . -name "*.py" -mtime -7
+
+pipeline integration:
+$cat users.txt
+Contact: john.doe@example.com
+User 'alice_smith' logged in at 3pm
+Posted by: @bob_jones on Twitter
+Author: Jane Doe (jdoe)
+Message from mike_wilson yesterday
+Submitted by user: sarah.connor
+$ INSTRUCTIONS="Extract just the username from each line, one per line, nothing else"
+$ llm "$INSTRUCTIONS" < users.txt
+john.doe
+alice_smith
+bob_jones
+jdoe
+mike_wilson
+sarah.connor
