@@ -152,3 +152,12 @@ bob_jones
 jdoe
 mike_wilson
 sarah.connor
+
+
+virtual environment: allows you to create multiple "environments" with different packages from python without packages clashing
+
+conda activate huray - how to activate environment
+conda deactivate - deactivate environment
+pip install - how to install packages
+import - how to import the installed packages into your file
+
