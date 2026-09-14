@@ -161,3 +161,7 @@ conda deactivate - deactivate environment
 pip install - how to install packages
 import - how to import the installed packages into your file
 
+
+MARIMO:
+
+marimo edit main.py - open marimo notebook of main.py
