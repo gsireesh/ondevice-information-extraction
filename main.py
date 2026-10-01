@@ -7,6 +7,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import os
+    import json
 
     import anthropic
     import marimo as mo
@@ -18,7 +19,7 @@ def _():
     from spacy import displacy
 
 
-    return anthropic, displacy, load_dataset, load_dotenv, mo, os
+    return anthropic, displacy, json, load_dataset, load_dotenv, mo, os
 
 
 @app.cell
@@ -143,7 +144,14 @@ def _(client, instance):
     )
     for block in message.content:
         if block.type == "text":
+            json_text = block.text
             print(block.text)
+    return (json_text,)
+
+
+@app.cell
+def _(json, json_text):
+    json.loads(json_text[8:-4])
     return
 
 
