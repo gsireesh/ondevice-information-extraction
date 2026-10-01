@@ -1,0 +1,5 @@
+.idea/
+.python-version
+__marimo__/
+
+.env
