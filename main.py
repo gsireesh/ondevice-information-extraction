@@ -105,7 +105,7 @@ def _(dataset, displacy, index, mo):
 
 
     render(dataset["train"][index.value])
-    return
+    return (label2id,)
 
 
 @app.cell
@@ -120,43 +120,38 @@ def _(instance):
     return
 
 
-app._unparsable_cell(
-    r"""
-    def tag_with_model(client, sentence, labels)
-    """,
-    name="_"
-)
+@app.cell
+def _(instance, json):
+    def tag_with_model(client, sentence, labels):
+
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1024,
+            system="In the message, you will be given a sentence. tag the entities in it. Return a json object with the entities and their prefixes and suffixes.",
+            messages=[ 
+                {
+                    "role": "user",
+                    "content": " ".join(instance)
+                }        
+            ]
+        )
+        json_text = None
+
+        for block in message.content:
+            if block.type == "text":
+                json_text = block.text
+                print(block.text)
+
+        return json.loads(json_text[8:-4])
+
+    return (tag_with_model,)
 
 
 @app.cell
-def _(client, instance):
-    message = client.messages.create(
-      model="claude-haiku-4-5",
-      max_tokens=1024,
-      system="In the message, you will be given a sentence. tag the entities in it. Return a json object with the entities and their prefixes and suffixes.",
-      messages=[ 
-      {
-          "role": "user",
-          "content": " ".join(instance)
-                
-      }        
-    ]
-    )
-    for block in message.content:
-        if block.type == "text":
-            json_text = block.text
-            print(block.text)
-    return (json_text,)
+def _(client, instance, label2id, tag_with_model):
 
-
-@app.cell
-def _(json, json_text):
-    json.loads(json_text[8:-4])
-    return
-
-
-@app.cell
-def _():
+    tag_with_model(client, instance, label2id)
+    #json.loads(json_text[8:-4])
     return
 
 
