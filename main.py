@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.24.2"
+__generated_with = "0.25.1"
 app = marimo.App(width="medium")
 
 
@@ -116,8 +116,8 @@ def _(anthropic, api_key):
 
 @app.cell
 def _(instance):
-    " ".join(instance)
-    return
+    sentence = " ".join(instance)
+    return (sentence,)
 
 
 @app.cell
@@ -141,17 +141,56 @@ def _(instance, json):
             if block.type == "text":
                 json_text = block.text
                 print(block.text)
-
         return json.loads(json_text[8:-4])
+
 
     return (tag_with_model,)
 
 
 @app.cell
-def _(client, instance, label2id, tag_with_model):
-
-    tag_with_model(client, instance, label2id)
+def _(client, label2id, sentence, tag_with_model):
+    entities = tag_with_model(client, sentence, label2id)
     #json.loads(json_text[8:-4])
+    return (entities,)
+
+
+@app.cell
+def _(displacy, mo):
+    def renderjson(instance, entities):
+
+
+        tokens = instance["tokens"]
+        sentence = " ".join(tokens)
+        ent = []
+        output = entities.get("entities", [])
+
+        for item in output:
+            entity_text = item["entity"]
+            label = item["type"]
+            before = item["prefix"]
+            after = item["suffix"]
+
+            phrase = before + entity_text + after
+            start = sentence.find(phrase)
+
+            if (start != -1):
+                start_char = start + len(before)
+                end_char = start_char + len(entity_text)
+                ent.append({"start": start_char, "end": end_char, "label": label})
+
+        ex = [{"text": sentence,
+               "ents": ent,
+               "title": None}]
+
+        html_out = displacy.render(ex, style="ent", manual=True)
+        return mo.Html(html_out)
+
+    return (renderjson,)
+
+
+@app.cell
+def _(dataset, entities, index, renderjson):
+    renderjson(dataset["train"][index.value], entities)
     return
 
 
