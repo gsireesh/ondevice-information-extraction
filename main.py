@@ -121,8 +121,11 @@ def _(instance):
 
 
 @app.cell
-def _(instance, json):
+def _(json):
     def tag_with_model(client, sentence, labels):
+
+        if not sentence:
+            return {}
 
         message = client.messages.create(
             model="claude-haiku-4-5",
@@ -131,17 +134,26 @@ def _(instance, json):
             messages=[ 
                 {
                     "role": "user",
-                    "content": " ".join(instance)
+                    "content": sentence
                 }        
             ]
         )
         json_text = None
+    
 
         for block in message.content:
             if block.type == "text":
                 json_text = block.text
+                break;
                 print(block.text)
-        return json.loads(json_text[8:-4])
+
+        if not json_text:
+            return {}
+        
+        try:
+            return json.loads(json_text[8:-4])
+        except json.JSONDecodeError:
+            return {}
 
 
     return (tag_with_model,)
@@ -152,6 +164,18 @@ def _(client, label2id, sentence, tag_with_model):
     entities = tag_with_model(client, sentence, label2id)
     #json.loads(json_text[8:-4])
     return (entities,)
+
+
+@app.cell
+def _(client, dataset, label2id, tag_with_model):
+    results = []
+
+    for i in range(dataset["train"].num_rows):
+        curr_sentence = " ".join(dataset["train"]["tokens"][i])
+        data = tag_with_model(client, curr_sentence, label2id)
+        results.append(data)
+
+    return
 
 
 @app.cell
