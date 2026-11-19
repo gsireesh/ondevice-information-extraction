@@ -9,17 +9,36 @@ def _():
     import os
     import json
 
+    import dspy
     import anthropic
     import marimo as mo
     import spacy
     import en_core_web_sm
+    import seqeval.metrics
 
     from datasets import load_dataset
     from dotenv import load_dotenv
     from spacy import displacy
 
+    from seqeval.metrics import accuracy_score
+    from seqeval.metrics import classification_report
+    from seqeval.metrics import f1_score
+    from seqeval.metrics import recall_score
+    from seqeval.metrics import precision_score
 
-    return anthropic, displacy, json, load_dataset, load_dotenv, mo, os
+    return (
+        anthropic,
+        displacy,
+        dspy,
+        f1_score,
+        json,
+        load_dataset,
+        load_dotenv,
+        mo,
+        os,
+        precision_score,
+        recall_score,
+    )
 
 
 @app.cell
@@ -111,7 +130,7 @@ def _(dataset, displacy, index, mo):
 @app.cell
 def _(anthropic, api_key):
     client = anthropic.Anthropic(api_key=api_key)
-    return (client,)
+    return
 
 
 @app.cell
@@ -121,7 +140,7 @@ def _(instance):
 
 
 @app.cell
-def _(instance, json):
+def _(json):
     def tag_with_model(client, sentence, labels):
 
         message = client.messages.create(
@@ -131,7 +150,7 @@ def _(instance, json):
             messages=[ 
                 {
                     "role": "user",
-                    "content": " ".join(instance)
+                    "content": sentence
                 }        
             ]
         )
@@ -144,14 +163,14 @@ def _(instance, json):
         return json.loads(json_text[8:-4])
 
 
-    return (tag_with_model,)
+    return
 
 
 @app.cell
-def _(client, label2id, sentence, tag_with_model):
-    entities = tag_with_model(client, sentence, label2id)
+def _():
+    #entities = tag_with_model(client, sentence, label2id)
     #json.loads(json_text[8:-4])
-    return (entities,)
+    return
 
 
 @app.cell
@@ -170,13 +189,31 @@ def _(displacy, mo):
             before = item["prefix"]
             after = item["suffix"]
 
-            phrase = before + entity_text + after
+            phrase_part = []
+            if before:
+                phrase_part.append(before)
+            phrase_part.append(entity_text)
+            if after:
+                phrase_part.append(after)
+
+            phrase = " ".join(phrase_part)
             start = sentence.find(phrase)
 
+
             if (start != -1):
-                start_char = start + len(before)
+                if (before):
+                    start_char = start + len(before) + 1
+                else:
+                    start_char = start
                 end_char = start_char + len(entity_text)
-                ent.append({"start": start_char, "end": end_char, "label": label})
+
+                if (label.startswith("B-")):
+                    clean_label = label[2:]
+                else:
+                    clean_label = label
+    
+                ent.append({"start": start_char, "end": end_char, "label": clean_label})
+
 
         ex = [{"text": sentence,
                "ents": ent,
@@ -189,8 +226,87 @@ def _(displacy, mo):
 
 
 @app.cell
-def _(dataset, entities, index, renderjson):
+def _():
+    #renderjson(dataset["train"][index.value], entities)
+    return
+
+
+@app.cell
+def _(dspy, json, label2id, sentence):
+    class ExtractEvent(dspy.Signature):
+        """Extract entities from the sentence using the provided allowed labels. Return a json object with this format:
+            {"entities": [{"entity": "word", "type": "tag", "prefix": "word before", "suffix": "word after"}]}"""
+
+        sentence = dspy.InputField(desc="The sentence to tag")
+        labels = dspy.InputField(desc="The labels you must use")
+        json_output = dspy.OutputField(desc="raw JSON output containing entities")
+
+    def tag_with_dspy(sentence, label):
+        dspy.configure(lm=dspy.LM("anthropic/claude-haiku-4-5"))
+
+        tag_generator = dspy.Predict(ExtractEvent)
+        result = tag_generator(sentence=sentence, labels=label)
+
+        return json.loads(result.json_output)
+
+
+    tag_with_dspy(sentence, label2id)
+    return (tag_with_dspy,)
+
+
+@app.cell
+def _(dataset, index, label2id, renderjson, sentence, tag_with_dspy):
+    entities = tag_with_dspy(sentence, label2id)
     renderjson(dataset["train"][index.value], entities)
+    return
+
+
+@app.cell
+def _(f1_score, label2id, precision_score, recall_score, tag_with_dspy):
+    def calculate(dataset):
+        y_true = []
+        y_pred = []
+        id2label = {v: k for k, v in label2id.items()}
+        for i in range(dataset["train"].num_rows):
+            items = []
+            token = dataset["train"][i]["tokens"]
+            true_id = dataset["train"][i]["ner_tags"]
+
+            true_tags = [id2label[tag_id] for tag_id in true_id]
+            y_true.append(true_tags)
+            pred_tags = ["O"] * len(token)
+
+            sentence = " ".join(token)
+            entities = tag_with_dspy(sentence, label2id)
+            output = entities.get("entities", [])
+
+            for item in output:
+                entity_text = item["entity"]
+                label = item["type"]
+
+                entity_tokens = entity_text.split()
+
+                for j in range(len(token)):
+                    if token[j:j+len(entity_tokens)] == entity_tokens:
+                        pred_tags[j] = label
+
+                        base_label = label[2:] if label.startswith("B-") else label
+                        for k in range(1, len(entity_tokens)):
+                            pred_tags[j+k] = f"I-{base_label}"
+                        break
+
+            y_pred.append(pred_tags)
+        print(f1_score(y_true, y_pred)) 
+        print(recall_score(y_true, y_pred))
+        print(precision_score(y_true, y_pred))
+        return y_true, y_pred
+
+    return (calculate,)
+
+
+@app.cell
+def _(calculate, dataset):
+    calculate(dataset)
     return
 
 
